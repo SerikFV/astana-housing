@@ -1,0 +1,137 @@
+---
+# ============================================================
+# Astana Housing — Ansible Playbook
+# Сервер конфигурациясын толық автоматтандыру
+# Іске қосу: ansible-playbook -i inventory.ini playbook.yml
+# ============================================================
+
+- name: Astana Housing — Толық орнату
+  hosts: local
+  become: false
+  vars:
+    project_dir: "{{ playbook_dir }}/.."
+    db_name: astana_housing
+    db_user: postgres
+    db_password: postgres123
+    app_port: 3001
+    frontend_port: 5173
+
+  tasks:
+
+    # ============================================================
+    # 1. Жүйе тексеру
+    # ============================================================
+    - name: Docker орнатылғанын тексеру
+      command: docker --version
+      register: docker_version
+      changed_when: false
+
+    - name: Docker нұсқасын көрсету
+      debug:
+        msg: "Docker: {{ docker_version.stdout }}"
+
+    - name: Node.js орнатылғанын тексеру
+      command: node --version
+      register: node_version
+      changed_when: false
+      ignore_errors: true
+
+    - name: Node.js нұсқасын көрсету
+      debug:
+        msg: "Node.js: {{ node_version.stdout | default('орнатылмаған') }}"
+
+    # ============================================================
+    # 2. SSL сертификат жасау
+    # ============================================================
+    - name: nginx/ssl папкасын жасау
+      file:
+        path: "{{ project_dir }}/nginx/ssl"
+        state: directory
+        mode: '0755'
+
+    - name: SSL сертификат бар-жоғын тексеру
+      stat:
+        path: "{{ project_dir }}/nginx/ssl/cert.pem"
+      register: ssl_cert
+
+    - name: SSL сертификат жасау (Docker арқылы)
+      command: >
+        docker run --rm
+        -v {{ project_dir }}/nginx/ssl:/ssl
+        alpine/openssl req -x509 -nodes -days 365 -newkey rsa:2048
+        -keyout /ssl/key.pem
+        -out /ssl/cert.pem
+        -subj "/C=KZ/ST=Astana/L=Astana/O=AstanaHousing/CN=localhost"
+      when: not ssl_cert.stat.exists
+
+    # ============================================================
+    # 3. Docker Compose іске қосу
+    # ============================================================
+    - name: Docker Compose іске қосу
+      command: docker-compose up -d --build
+      args:
+        chdir: "{{ project_dir }}"
+      register: compose_result
+
+    - name: Docker Compose нәтижесі
+      debug:
+        msg: "{{ compose_result.stdout_lines | default([]) }}"
+
+    # ============================================================
+    # 4. PostgreSQL дайын болғанша күту
+    # ============================================================
+    - name: PostgreSQL дайын болғанша күту
+      command: docker exec astana_db pg_isready -U postgres
+      register: pg_ready
+      until: pg_ready.rc == 0
+      retries: 10
+      delay: 5
+      changed_when: false
+
+    - name: PostgreSQL дайын
+      debug:
+        msg: "PostgreSQL жұмыс істеп тұр"
+
+    # ============================================================
+    # 5. Node.js пакеттерін орнату
+    # ============================================================
+    - name: Frontend пакеттерін орнату
+      command: npm install
+      args:
+        chdir: "{{ project_dir }}"
+      changed_when: false
+
+    - name: Backend пакеттерін орнату
+      command: npm install
+      args:
+        chdir: "{{ project_dir }}/server"
+      changed_when: false
+
+    # ============================================================
+    # 6. Backend health тексеру
+    # ============================================================
+    - name: Backend іске қосылғанын тексеру
+      uri:
+        url: "http://localhost:{{ app_port }}/api/health"
+        method: GET
+        status_code: 200
+      register: health_check
+      ignore_errors: true
+
+    - name: Backend статусы
+      debug:
+        msg: "Backend: {{ health_check.json.status | default('жұмыс істемей тұр') }}"
+
+    # ============================================================
+    # 7. Нәтиже
+    # ============================================================
+    - name: Орнату аяқталды
+      debug:
+        msg:
+          - "Astana Housing орнатылды!"
+          - "Сайт:       http://localhost:5173"
+          - "Backend:    http://localhost:3001/api/health"
+          - "Grafana:    http://localhost:3000"
+          - "Prometheus: http://localhost:9090"
+          - "Jenkins:    http://localhost:8080"
+          - "n8n:        http://localhost:5678"

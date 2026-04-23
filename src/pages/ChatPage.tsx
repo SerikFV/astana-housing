@@ -108,16 +108,32 @@ export default function ChatPage() {
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
+      // Алдымен n8n webhook арқылы жіберу
+      let aiReply = ''
+      try {
+        const n8nRes = await fetch('http://localhost:5678/webhook/astana-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text.trim() }),
+        })
+        if (n8nRes.ok) {
+          const n8nData = await n8nRes.json()
+          aiReply = n8nData.reply || ''
+        }
+      } catch { /* n8n жоқ болса Groq-қа fallback */ }
+
+      // n8n жауап бермесе тікелей Groq API
+      if (!aiReply) {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-8b-instant',
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
             ...newMessages.map(m => ({ role: m.role, content: m.content })),
           ],
           temperature: 0.7,
@@ -131,8 +147,10 @@ export default function ChatPage() {
       }
 
       const data = await res.json()
-      const reply = data.choices?.[0]?.message?.content || 'Жауап алынбады'
-      setMessages(prev => [...prev, { role: 'assistant', content: reply, time: getTime() }])
+      aiReply = data.choices?.[0]?.message?.content || 'Жауап алынбады'
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', content: aiReply, time: getTime() }])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Белгісіз қате')
     } finally {

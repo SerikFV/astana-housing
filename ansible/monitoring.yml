@@ -1,0 +1,59 @@
+---
+# ============================================================
+# Astana Housing — Monitoring Setup Playbook
+# Prometheus + Grafana + Alertmanager конфигурациясы
+# Іске қосу: ansible-playbook -i inventory.ini monitoring.yml
+# ============================================================
+
+- name: Monitoring жүйесін орнату
+  hosts: local
+  become: false
+  vars:
+    project_dir: "{{ playbook_dir }}/.."
+
+  tasks:
+
+    - name: Prometheus контейнері жұмыс істеп тұр ма
+      command: docker inspect --format="{{ '{{' }}.State.Running{{ '}}' }}" astana_prometheus
+      register: prometheus_status
+      changed_when: false
+      ignore_errors: true
+
+    - name: Prometheus статусы
+      debug:
+        msg: "Prometheus: {{ 'жұмыс істеп тұр' if prometheus_status.stdout == 'true' else 'өшік' }}"
+
+    - name: Grafana контейнері жұмыс істеп тұр ма
+      command: docker inspect --format="{{ '{{' }}.State.Running{{ '}}' }}" astana_grafana
+      register: grafana_status
+      changed_when: false
+      ignore_errors: true
+
+    - name: Grafana статусы
+      debug:
+        msg: "Grafana: {{ 'жұмыс істеп тұр' if grafana_status.stdout == 'true' else 'өшік' }}"
+
+    - name: Prometheus конфигурациясын қайта жүктеу
+      uri:
+        url: "http://localhost:9090/-/reload"
+        method: POST
+        status_code: [200, 204]
+      ignore_errors: true
+
+    - name: Grafana datasource тексеру
+      uri:
+        url: "http://localhost:3000/api/datasources"
+        method: GET
+        user: admin
+        password: admin123
+        force_basic_auth: true
+        status_code: 200
+      register: datasources
+      ignore_errors: true
+
+    - name: Monitoring нәтижесі
+      debug:
+        msg:
+          - "Prometheus: http://localhost:9090"
+          - "Grafana:    http://localhost:3000 (admin/admin123)"
+          - "Alertmanager: http://localhost:9093"

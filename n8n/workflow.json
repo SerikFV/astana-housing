@@ -4,54 +4,66 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "chat",
-        "responseMode": "responseNode"
+        "path": "astana-chat",
+        "responseMode": "responseNode",
+        "options": {}
       },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
-      "position": [240, 300]
+      "typeVersion": 2,
+      "position": [200, 300]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.groq.com/openai/v1/chat/completions",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.GROQ_API_KEY }}"
+              "value": "Bearer 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"
             }
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "model",
-              "value": "llama3-8b-8192"
-            },
-            {
-              "name": "messages",
-              "value": "={{ [{\"role\": \"system\", \"content\": \"Сен Астана тұрғын үй нарығы бойынша AI ассистентсің. Қазақша жауап бер.\"}, {\"role\": \"user\", \"content\": $json.body.message}] }}"
-            }
-          ]
-        }
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"max_tokens\": 500,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Sen Astana qaласының тұрғын үй нарығы бойынша AI ассистентсің. Қазақша қысқа жауап бер.\"},\n    {\"role\": \"user\", \"content\": \"{{ $json.body.message }}\"}\n  ]\n}",
+        "options": {}
       },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
       "name": "Groq AI",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [460, 300]
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8783899500:AAHaZ_05HRKGKfWtG4UpEL82AkCz2UvoXLs/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"1609875869\",\n  \"text\": \"Жаңа сұрақ: {{ $('Webhook').item.json.body.message }}\\n\\nЖауап: {{ $('Groq AI').item.json.choices[0].message.content.replace(/\\n/g, ' ') }}\"\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 180]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ {\"reply\": $json.choices[0].message.content} }}"
+        "responseBody": "={{ JSON.stringify({ reply: $('Groq AI').item.json.choices[0].message.content }) }}",
+        "options": {}
       },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
       "name": "Response",
       "type": "n8n-nodes-base.respondToWebhook",
-      "position": [680, 300]
+      "typeVersion": 1.1,
+      "position": [680, 420]
     }
   ],
   "connections": {
@@ -59,7 +71,12 @@
       "main": [[{ "node": "Groq AI", "type": "main", "index": 0 }]]
     },
     "Groq AI": {
-      "main": [[{ "node": "Response", "type": "main", "index": 0 }]]
+      "main": [[
+        { "node": "Telegram", "type": "main", "index": 0 },
+        { "node": "Response", "type": "main", "index": 0 }
+      ]]
     }
-  }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
 }
