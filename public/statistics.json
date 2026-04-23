@@ -1,0 +1,108 @@
+{
+  "general": {
+    "total": 18388,
+    "avg_price": 93952,
+    "min_price": 7840,
+    "max_price": 2947475,
+    "avg_price_per_m2": 1240
+  },
+  "byDistrict": [
+    {
+      "district": "Есильский р-н",
+      "count": 5121,
+      "avg_price": 127046
+    },
+    {
+      "district": "Нура р-н",
+      "count": 4123,
+      "avg_price": 89243
+    },
+    {
+      "district": "Алматы р-н",
+      "count": 3894,
+      "avg_price": 80955
+    },
+    {
+      "district": "Сарыарка р-н",
+      "count": 2104,
+      "avg_price": 60185
+    },
+    {
+      "district": "Сарайшык р-н",
+      "count": 1467,
+      "avg_price": 80234
+    },
+    {
+      "district": "р-н Байконур",
+      "count": 901,
+      "avg_price": 69668
+    },
+    {
+      "district": "Басқа",
+      "count": 778,
+      "avg_price": 111415
+    }
+  ],
+  "byRooms": [
+    {
+      "rooms": 1,
+      "count": 4339,
+      "avg_price": 44519
+    },
+    {
+      "rooms": 2,
+      "count": 6581,
+      "avg_price": 70234
+    },
+    {
+      "rooms": 3,
+      "count": 5334,
+      "avg_price": 112259
+    },
+    {
+      "rooms": 4,
+      "count": 1728,
+      "avg_price": 194047
+    },
+    {
+      "rooms": 5,
+      "count": 318,
+      "avg_price": 302037
+    },
+    {
+      "rooms": 6,
+      "count": 46,
+      "avg_price": 362297
+    },
+    {
+      "rooms": 7,
+      "count": 24,
+      "avg_price": 634340
+    },
+    {
+      "rooms": 8,
+      "count": 6,
+      "avg_price": 545119
+    },
+    {
+      "rooms": 9,
+      "count": 4,
+      "avg_price": 365978
+    },
+    {
+      "rooms": 10,
+      "count": 4,
+      "avg_price": 535409
+    },
+    {
+      "rooms": 11,
+      "count": 3,
+      "avg_price": 930092
+    },
+    {
+      "rooms": 13,
+      "count": 1,
+      "avg_price": 491245
+    }
+  ]
+}

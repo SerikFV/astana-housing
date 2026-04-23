@@ -1,0 +1,38 @@
+groups:
+  - name: astana_housing_alerts
+    rules:
+      # CPU жоғары болса
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU жоғары: {{ $value }}%"
+
+      # Жад аз қалса
+      - alert: LowMemory
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 20
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Жад аз қалды: {{ $value }}%"
+
+      # Диск аз қалса
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Диск аз қалды: {{ $value }}%"
+
+      # Backend жауап бермесе
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend сервер жұмыс істемей тұр!"

@@ -1,0 +1,119 @@
+{
+  "title": "Astana Housing Monitor",
+  "uid": "astana-housing",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "CPU пайдалану (%)",
+      "type": "gauge",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 8 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
+        "legendFormat": "CPU %"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 100, "unit": "percent",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": 0 },
+            { "color": "yellow", "value": 60 },
+            { "color": "red", "value": 80 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Жад пайдалану (%)",
+      "type": "gauge",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 8 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+        "legendFormat": "RAM %"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 100, "unit": "percent",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": 0 },
+            { "color": "yellow", "value": 70 },
+            { "color": "red", "value": 85 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "HTTP сұраулар (жалпы)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 8 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(http_requests_total) or vector(0)",
+        "legendFormat": "Барлық сұраулар"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "fixed", "fixedColor": "#D4AF37" }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Сервис статусы",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 8 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "up",
+        "legendFormat": "{{job}}"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": 0 },
+            { "color": "green", "value": 1 }
+          ]},
+          "mappings": [{
+            "type": "value",
+            "options": {
+              "0": { "text": "ӨШІК", "color": "red", "index": 0 },
+              "1": { "text": "ЖҰМЫС ІСТЕП ТҰР", "color": "green", "index": 1 }
+            }
+          }]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "HTTP сұраулар (уақыт бойынша)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 10 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(rate(http_requests_total[1m])) or vector(0)",
+        "legendFormat": "req/s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 6,
+      "title": "Диск пайдалану (%)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 10 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "(1 - (node_filesystem_avail_bytes{fstype!=\"tmpfs\",fstype!=\"overlay\"} / node_filesystem_size_bytes{fstype!=\"tmpfs\",fstype!=\"overlay\"})) * 100",
+        "legendFormat": "{{mountpoint}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } }
+    }
+  ]
+}

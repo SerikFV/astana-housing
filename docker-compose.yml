@@ -1,0 +1,213 @@
+services:
+
+  # ============================================================
+  # 1. PostgreSQL
+  # ============================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: astana_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: astana_housing
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # 2. Backend (Express) — npm run dev арқылы іске қосылады
+  # docker-compose up кезінде автоматты қосылмайды
+  # ============================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: astana_backend
+    restart: "no"
+    profiles:
+      - production
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: astana_housing
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # ============================================================
+  # 3. Frontend (React + Nginx) — npm run dev арқылы іске қосылады
+  # ============================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: astana_frontend
+    restart: "no"
+    profiles:
+      - production
+
+  # ============================================================
+  # 4. Nginx Reverse Proxy (SSL)
+  # ============================================================
+  nginx:
+    image: nginx:alpine
+    container_name: astana_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - app-network
+
+  # ============================================================
+  # 5. Node Exporter (сервер метрикалары)
+  # ============================================================
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: astana_node_exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    networks:
+      - app-network
+
+  # ============================================================
+  # 6. Prometheus
+  # ============================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: astana_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - app-network
+
+  # ============================================================
+  # 7. Alertmanager
+  # ============================================================
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: astana_alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    networks:
+      - app-network
+
+  # ============================================================
+  # 8. Grafana
+  # ============================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: astana_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./monitoring/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./monitoring/grafana/dashboard.json:/etc/grafana/provisioning/dashboards/dashboard.json:ro
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+
+  # ============================================================
+  # 9. Telegram Alert Bot
+  # ============================================================
+  telegram-bot:
+    build:
+      context: ./monitoring/telegram-bot
+    container_name: astana_telegram_bot
+    restart: unless-stopped
+    environment:
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    networks:
+      - app-network
+
+  # ============================================================
+  # 10. Jenkins (CI/CD)
+  # ============================================================
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: astana_jenkins
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+    networks:
+      - app-network
+
+  # ============================================================
+  # 11. n8n (ЖИ автоматтандыру / workflow)
+  # ============================================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: astana_n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: admin123
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      WEBHOOK_URL: http://localhost:5678
+      GROQ_API_KEY: ${VITE_GROQ_API_KEY:-}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  prometheus_data:
+  grafana_data:
+  jenkins_data:
+  n8n_data:
