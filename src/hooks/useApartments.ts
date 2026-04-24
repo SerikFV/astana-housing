@@ -3,8 +3,12 @@ import type { Apartment, Statistics } from '../types'
 
 const API = 'http://localhost:3001/api'
 
+// Session-level cache (бет жаңартқанда тазаланады)
 let aptCache: Apartment[] | null = null
 let statsCache: Statistics | null = null
+
+// Бет жаңартқанда кэшті тазалау
+window.addEventListener('beforeunload', () => { aptCache = null; statsCache = null })
 
 export function useApartments() {
   const [apartments, setApartments] = useState<Apartment[]>(aptCache || [])

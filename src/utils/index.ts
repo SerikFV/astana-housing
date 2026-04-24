@@ -1,7 +1,7 @@
 import type { Apartment } from '../types'
 
 export const ADMIN_EMAIL = 'toilybai.amina.2019@gmail.com'
-export const ADMIN_EMAILS = ['toilybai.amina.2019@gmail.com', 'admin']
+export const ADMIN_EMAILS = ['toilybai.amina.2019@gmail.com', 'admin', 'admin@baspan.kz']
 
 export function isAdmin(email: string): boolean {
   return ADMIN_EMAILS.includes(email)
@@ -14,6 +14,7 @@ export const DISTRICT_COLORS: Record<string, string> = {
   'Алматы р-н': '#E67E22',
   'Байқоңыр р-н': '#9B59B6',
   'Байконурский р-н': '#9B59B6',
+  'р-н Байконур': '#9B59B6',
   'Нура р-н': '#E74C3C',
   'Сарайшык р-н': '#1ABC9C',
 }
@@ -81,4 +82,53 @@ export function toggleFavorite(email: string, apt: Apartment): void {
 
 export function getAllFeedbacks(): import('../types').Feedback[] {
   return JSON.parse(localStorage.getItem('all_feedbacks') || '[]')
+}
+
+// ─── Соңғы қаралған пәтерлер ───────────────────────────────
+const HISTORY_KEY = 'viewed_apartments'
+const HISTORY_MAX = 20
+
+export function addToHistory(apt: Apartment): void {
+  const history: Apartment[] = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+  const filtered = history.filter(a => a.id !== apt.id)
+  filtered.unshift(apt)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(filtered.slice(0, HISTORY_MAX)))
+}
+
+export function getHistory(): Apartment[] {
+  return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+}
+
+export function clearHistory(): void {
+  localStorage.removeItem(HISTORY_KEY)
+}
+
+// ─── Пәтер салыстыру ───────────────────────────────────────
+const COMPARE_KEY = 'compare_apartments'
+const COMPARE_MAX = 3
+
+export function getCompare(): Apartment[] {
+  return JSON.parse(localStorage.getItem(COMPARE_KEY) || '[]')
+}
+
+export function addToCompare(apt: Apartment): boolean {
+  const list = getCompare()
+  if (list.find(a => a.id === apt.id)) return true
+  if (list.length >= COMPARE_MAX) return false
+  list.push(apt)
+  localStorage.setItem(COMPARE_KEY, JSON.stringify(list))
+  return true
+}
+
+export function removeFromCompare(id: number): void {
+  const list = getCompare().filter(a => a.id !== id)
+  localStorage.setItem(COMPARE_KEY, JSON.stringify(list))
+}
+
+export function isInCompare(id: number): boolean {
+  return getCompare().some(a => a.id === id)
+}
+
+export function clearCompare(): void {
+  localStorage.removeItem(COMPARE_KEY)
 }

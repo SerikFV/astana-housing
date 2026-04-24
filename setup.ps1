@@ -18,8 +18,12 @@ Write-Host "Docker konteinerleri iske kosyluda..." -ForegroundColor Yellow
 docker-compose up -d --build
 
 # 3001 portty bosatu (eger alyngan bolsa)
-$proc = Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess
-if ($proc) { Stop-Process -Id $proc -Force }
+$connections = Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue
+foreach ($conn in $connections) {
+    if ($conn.OwningProcess -gt 4) {
+        Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue
+    }
+}
 
 # Backend fonда іске қосу
 Write-Host "Backend iske kosyluda..." -ForegroundColor Yellow
