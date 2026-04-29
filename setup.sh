@@ -17,7 +17,7 @@ echo "✅ SSL сертификат дайын"
 
 # Docker Compose іске қосу
 echo "🐳 Docker контейнерлері іске қосылуда..."
-docker-compose up -d --build
+docker compose up -d --build
 
 echo ""
 echo "✅ Барлығы іске қосылды!"
